@@ -353,12 +353,9 @@ components:
       allOf:
         - $ref: '#/components/schemas/baseElementVO'
     promoBenefitsResponseVO.promoBenefitsDiscounts:
-      type: object
-      properties:
-        promoBenefitsDiscount:
-          type: array
-          items:
-            $ref: '#/components/schemas/promoBenefitsDiscountVO'
+      type: array
+      items:
+        $ref: '#/components/schemas/promoBenefitsDiscountVO'
       description: promo Benefits Discount VO
     Occupancy:
       description: Defines the occupancy details

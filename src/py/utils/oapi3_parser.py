@@ -21,43 +21,46 @@ def resolve_ref(ref):
     component_type, component_name = ref_path[2], ref_path[3]
     # Get the referenced schema
     schema = COMPONENTS.get(component_type, {}).get(component_name, {})
-
     # If the schema itself has a $ref, recursively resolve it
     if '$ref' in schema:
-        return resolve_ref(schema['$ref'])
+        return resolve_ref(schema['$ref']), component_name
 
-    return schema
+    return schema, component_name
 
 # Function to extract details from a schema (whether inline or reusable)
-def extract_schema_details(schema):
-
+def extract_schema_details(schema, component_name):
+    st.write(schema)
     properties = schema.get('properties', {})
+    schema_datatype = schema.get('type', {})
+    schema_description = schema.get('description', {})
     required_fields = schema.get('required', [])
 
-    extracted_data = []
+    property_table = []
     for prop_name, prop_details in properties.items():
         # If the property is itself a reusable component, resolve it
-
-        if '$ref' in prop_details:
-            prop_details = resolve_ref(prop_details['$ref'])
-
-        description = prop_details.get('description', 'No description')
-        datatype = prop_details.get('type', 'Unknown')
+        property_description = prop_details.get('description', 'No description')
+        property_datatype = prop_details.get('type', 'Unknown')
         is_required = prop_name in required_fields
-        extracted_data.append({
-            'attribute': prop_name,
-            'description': description,
-            'datatype': datatype,
-            'required': is_required
+        property_table.append({
+            'Name': component_name+'.'+prop_name,
+            'Description': property_description,
+            'Datatype': property_datatype,
+            'Required': is_required
         })
 
-    return extracted_data
+        while '$ref' in prop_details:
+            prop_details, component_name = resolve_ref(prop_details['$ref'])
+            property_table.append(extract_schema_details(prop_details, component_name))
+
+    st.table(property_table)
+    return property_table
 
 def breakdown_schema(schema):
     if '$ref' in schema:
         ref = schema['$ref']
-        resolved_schema = resolve_ref(ref)
-        extract_schema_details(resolved_schema)
+        resolved_schema, component_name = resolve_ref(ref)
+        extracted = extract_schema_details(resolved_schema, component_name)
+        st.write(extracted)
     else:
         # Inline schema
         extract_schema_details(schema)
@@ -71,19 +74,22 @@ def breakdown_request_body(request_body):
             breakdown_schema(request_body_content['application/json'].get('schema', {}))
 
 def breakdown_parameters(parameters):
+    parameters_table = []
     if parameters:
         for parameter in parameters:
-            parameter_type = parameter.get('in')
-            parameter_name = parameter.get('name')
-            parameter_required = parameter.get('required')
-            parameter_schema = parameter.get('schema')
-            parameter_data_type = parameter_schema.get('type')
-            parameter_description = parameter_schema.get('description')
+            parameters_table.append({"Parameter type":parameter.get('in')
+                ,"Name":parameter.get('name')
+                ,"Required":parameter.get('required')
+                ,"Data-type":parameter.get('schema').get('type')
+                ,"Description":parameter.get('schema').get('description')})
+        st.table(parameters_table)
 
 def breakdown_methods(methods):
     for method, method_details in methods:
         if method in VALID_METHODS:
             method_description = method_details.get('description', 'Description not provided')
+            st.subheader(method)
+            st.caption(method_description)
             # parameters
             breakdown_parameters(method_details.get('parameters'))
             breakdown_request_body(method_details.get('requestBody'))
@@ -91,6 +97,8 @@ def breakdown_methods(methods):
 def breakdown_paths(paths):
     for path, path_details in paths.items():
         path_description = path_details.get('description', 'Description not provided')
+        st.header(path)
+        st.caption(path_description)
         breakdown_methods(path_details.items())
 
 def breakdown_spec(spec):
