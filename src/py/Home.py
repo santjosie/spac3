@@ -5,12 +5,14 @@ from utils.descodancer import descode
 def main():
     st.set_page_config(
         page_title='spac3 | Home',
-        page_icon=':material/home:',
+        page_icon=':twisted_rightwards_arrows:',
+        layout='wide',
         menu_items={
             'Get help': 'https://www.santhoshjose.dev',
+            'Report a bug': 'https://www.santhoshjose.dev',
             'About': '# Version: 2.2 #'
         })
-    st.header("Welcome to spac3!")
+    st.header("Spac3!")
     st.caption("OpenAPI spec management platform")
 
 def converter_tabs():
@@ -23,16 +25,17 @@ def converter_tabs():
         excel_to_oapi()
 
 def oapi_to_excel():
-    st.subheader("OpenAPI 2 Excel")
-    uploaded_file = st.file_uploader(label="Upload the open API spec that you want to convert into Excel",
+    uploaded_file = st.file_uploader(label="Convert OpenAPI documents to MS Excel files",
                                           type=["yaml","yml","json"], accept_multiple_files=False)
     if uploaded_file:
+        st.divider()
         excel = excelsify(uploaded_file)
         if excel:
-            st.download_button(label='Download the spec in Excel format',
-                                   data=excel,
-                                   file_name='open_api_spec.xlsx',
-                                   mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            st.download_button(label='Download',
+                               type='primary',
+                               data=excel,
+                               file_name='open_api_spec.xlsx',
+                               mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 def excel_to_oapi():
     st.subheader("Excel 2 OpenAPI")
@@ -46,9 +49,11 @@ def excel_to_oapi():
                                           type=["xlsx"], accept_multiple_files=False)
 
     if uploaded_spec_file and uploaded_excel_file:
+        st.divider()
         updated_spec_file = descode(uploaded_excel_file, uploaded_spec_file)
         if updated_spec_file:
-            st.download_button(label='Download the spec in yaml format',
+            st.download_button(label='Download',
+                               type = 'primary',
                                 data=updated_spec_file,
                                 file_name='open_api_spec.yaml',
                                 mime='application/octet-stream')

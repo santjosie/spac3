@@ -1,9 +1,15 @@
+from pickle import GLOBAL
+
 import streamlit as st
 import pandas as pd
+import numpy as np
 import yaml
 import json
 import io
 import copy
+
+DESCRIPTIONS_COUNT = 0
+UPDATES_TABLE =[]
 
 def resolve_ref(ref, spec):
     """
@@ -19,6 +25,8 @@ def update_descriptions(schema, spec, path, description_map, visited_refs=None):
     """
     Recursively update descriptions in the schema based on the description_map.
     """
+    global DESCRIPTIONS_COUNT
+    global UPDATES_TABLE
     if visited_refs is None:
         visited_refs = set()
     if '$ref' in schema:
@@ -42,9 +50,23 @@ def update_descriptions(schema, spec, path, description_map, visited_refs=None):
         properties = schema.get('properties', {})
         for prop_name, prop_schema in properties.items():
             full_path = f"{path}.{prop_name}" if path else prop_name
+            st.write(path +'.'+prop_name)
             # Update description if present in the map
             if full_path in description_map:
-                prop_schema['description'] = description_map[full_path]
+                st.write('in : ' + path + '.' + prop_name)
+                #had a description that has been removed or updated
+                if 'description' in prop_schema and prop_schema['description'] != description_map[full_path]:
+                    UPDATES_TABLE.append({'name': prop_name
+                                          ,'old_description':prop_schema['description']
+                                          ,'new_description':description_map[full_path]})
+                    prop_schema['description'] = description_map[full_path]
+                    DESCRIPTIONS_COUNT = DESCRIPTIONS_COUNT + 1
+                if 'description' not in prop_schema and description_map[full_path] and description_map[full_path] is not None:
+                    UPDATES_TABLE.append({'name': prop_name
+                                             , 'old_description': None
+                                             , 'new_description': description_map[full_path]})
+                    prop_schema['description'] = description_map[full_path]
+                    DESCRIPTIONS_COUNT = DESCRIPTIONS_COUNT + 1
             update_descriptions(prop_schema, spec, full_path, description_map, visited_refs.copy())
     elif schema.get('type') == 'array':
         items_schema = schema.get('items', {})
@@ -52,7 +74,12 @@ def update_descriptions(schema, spec, path, description_map, visited_refs=None):
     else:
         # For primitive types
         if path in description_map:
-            schema['description'] = description_map[path]
+            if 'description' in schema and schema['description'] != description_map[path]:
+                UPDATES_TABLE.append({'name': path
+                                         , 'old_description': schema['description']
+                                         , 'new_description': description_map[path]})
+                schema['description'] = description_map[path]
+                DESCRIPTIONS_COUNT = DESCRIPTIONS_COUNT + 1
 
 def load_oapi_spec(file):
     """
@@ -68,48 +95,40 @@ def load_oapi_spec(file):
     return spec
 
 def descode(excel_file, spec_file):
+    global DESCRIPTIONS_COUNT
+    global UPDATES_TABLE
+    DESCRIPTIONS_COUNT = 0
+    UPDATES_TABLE =[]
+    # Read Excel file into DataFrame
+    df_attributes = pd.read_excel(excel_file, sheet_name='attributes')
+    df_attributes = df_attributes.replace({np.nan: None})
+    # Ensure required columns are present
+    required_columns = ['full_path', 'name', 'description']
+    if not all(col in df_attributes.columns for col in required_columns):
+        st.error(f"Excel file must contain columns: {', '.join(required_columns)}")
+        return
 
-    if excel_file and spec_file:
-        # Read Excel file into DataFrame
-        df = pd.read_excel(excel_file, sheet_name='attributes')
-        # Ensure required columns are present
-        required_columns = ['parent', 'name', 'description']
-        if not all(col in df.columns for col in required_columns):
-            st.error(f"Excel file must contain columns: {', '.join(required_columns)}")
-            return
+    description_map = pd.Series(df_attributes['description'].values, index=df_attributes['full_path']).to_dict()
+    st.write(description_map)
+    spec = load_oapi_spec(spec_file)
 
-        # Create a mapping from full path to description
-        #TODO - explain this
-        df['Full Path'] = df.apply(
-            lambda row: f"{row['parent']}.{row['name']}" if row['parent'] else row['name'],
-            axis=1
-        )
-        description_map = pd.Series(df['description'].values, index=df['Full Path']).to_dict()
+    # deep copy of spec to avoid modifying the original
+    updated_spec = copy.deepcopy(spec)
 
-        spec = load_oapi_spec(spec_file)
+    # Update descriptions in the spec
+    components = updated_spec.get('components', {})
+    schemas = components.get('schemas', {})
+    for schema_name, schema in schemas.items():
+        schema_path = schema_name  # Top-level schema name
+        update_descriptions(schema, updated_spec, schema_path, description_map)
 
-        # Deep copy of spec to avoid modifying the original
-        #TODO - what's deepcopy
-        updated_spec = copy.deepcopy(spec)
+    # Output the updated spec
+    st.success(str(DESCRIPTIONS_COUNT) + " descriptions updated!")
+    st.subheader('List of changes')
+    st.table(UPDATES_TABLE)
 
-        # Update descriptions in the spec
-        components = updated_spec.get('components', {})
-        schemas = components.get('schemas', {})
-        for schema_name, schema in schemas.items():
-            schema_path = schema_name  # Top-level schema name
-            update_descriptions(schema, updated_spec, schema_path, description_map)
+    # Provide a download link for the updated spec
+    updated_spec_str = yaml.dump(updated_spec, sort_keys=False)
 
-        # Output the updated spec
-        st.success("Descriptions updated successfully!")
-
-        # Provide a download link for the updated spec
-        updated_spec_str = yaml.dump(updated_spec, sort_keys=False)
-
-        return updated_spec_str
-        st.download_button(
-            label="Download Updated OpenAPI Spec",
-            data=updated_spec_str,
-            file_name=f"updated_openapi.{file_extension}",
-            mime='application/octet-stream'
-        )
+    return updated_spec_str
 

@@ -23,11 +23,11 @@ def get_parameters(parameters):
     parameters_table = []
     if parameters:
         for parameter in parameters:
-            parameters_table.append({"Parameter type": parameter.get('in')
-                                        , "Name": parameter.get('name')
-                                        , "Required": parameter.get('required')
-                                        , "Data-type": parameter.get('schema').get('type')
-                                        , "Description": parameter.get('schema').get('description')})
+            parameters_table.append({"parameter_type": parameter.get('in')
+                                        , "name": parameter.get('name')
+                                        , "required": parameter.get('required')
+                                        , "data_type": parameter.get('schema').get('type')
+                                        , "description": parameter.get('schema').get('description')})
         return parameters_table
 
 def get_request_body(request_body, spec):
@@ -35,32 +35,27 @@ def get_request_body(request_body, spec):
         request_body_content = request_body.get('content')
         if 'application/json' in request_body_content:
             schema = request_body_content['application/json'].get('schema', {})
-            if '$ref' in schema:
-                ref = schema['$ref']
-                attributes = schema_traversal(ref, spec)
-                return attributes
-
-def schema_traversal(schema_ref, spec):
-    response_schema = resolve_ref(schema_ref, spec)
-    attributes = extract_attributes(response_schema, spec)
-    return attributes
+            attributes = extract_attributes(schema, spec)
+            return attributes
 
 def resolve_ref(ref, spec):
     """
     Resolve a JSON Reference ($ref) within the OpenAPI specification.
     """
-    ref_path = ref.lstrip('#/').split('/')
+    ref_path = ref.lstrip('#/').split('/')[-1]
+    st.write(ref_path)
     result = spec
-    for part in ref_path:
-        result = result.get(part, {})
+    #for part in ref_path:
+    result = result.get(ref_path, {})
+    st.write(result)
     return result
 
-def extract_attributes(schema, spec, parent_path='', visited_refs=None, attributes=None):
+def extract_attributes(schema, spec, parent_path='', visited_refs=None, attributes=None, object_name=None):
     """
     Recursively extract attributes from the schema.
     """
     if visited_refs is None:
-        visited_refs = set()
+        visited_refs = [] #set()
     if attributes is None:
         attributes = []
 
@@ -68,7 +63,7 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
         ref = schema['$ref']
         if ref in visited_refs:
             return attributes  # Avoid infinite recursion
-        visited_refs.add(ref)
+        visited_refs.append(ref)
         resolved_schema = resolve_ref(ref, spec)
         return extract_attributes(resolved_schema, spec, parent_path, visited_refs, attributes)
 
@@ -81,32 +76,47 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
     elif 'oneOf' in schema:
         for subschema in schema['oneOf']:
             extract_attributes(subschema, spec, parent_path, visited_refs, attributes)
+
     elif schema.get('type') == 'object':
+        schema_name = visited_refs[-1].split('/')[-1]
+        #st.write('schema name: ' + schema_name + ' parent_path: ' +parent_path)
+        full_path = parent_path
+        attributes.append({
+            'full_path': full_path,
+            'name': schema_name,
+            'type': schema.get('type'),
+            'description': schema.get('description')
+        })
         properties = schema.get('properties', {})
         for prop_name, prop_schema in properties.items():
             full_path = f"{parent_path}.{prop_name}" if parent_path else prop_name
             attr_type = prop_schema.get('type', 'object')
-            description = prop_schema.get('description', '')
-            attributes.append({
-                'parent': parent_path,
-                'name': prop_name,
-                'type': attr_type,
-                'description': description
-            })
-            extract_attributes(prop_schema, spec, full_path, visited_refs.copy(), attributes)
+            if attr_type not in ['object', 'array']:
+                description = prop_schema.get('description', '')
+                # Append attributes
+                attributes.append({
+                        'full_path': full_path,
+                        'name': prop_name,
+                        'type': attr_type,
+                        'description': description
+                    })
+            # Recursively process if it's an object or array
+            if attr_type in ['object', 'array']:
+                extract_attributes(prop_schema, spec, full_path, visited_refs.copy(), attributes)
     elif schema.get('type') == 'array':
+        schema_name = visited_refs[-1].split('/')[-1]
+        #st.write('schema name: ' + schema_name + ' parent_path: ' +parent_path)
+        full_path = parent_path
+        attributes.append({
+            'full_path': full_path,
+            'name': schema_name,
+            'type': schema.get('type'),
+            'description': schema.get('description')
+        })
         items_schema = schema.get('items', {})
         extract_attributes(items_schema, spec, parent_path, visited_refs.copy(), attributes)
     else:
-        # For primitive types
-        attr_type = schema.get('type', 'object')
-        description = schema.get('description', '')
-        attributes.append({
-            'parent': '.'.join(parent_path.split('.')[:-1]),
-            'name': parent_path.split('.')[-1],
-            'type': attr_type,
-            'description': description
-        })
+        pass
     return attributes
 
 def get_response(response):
@@ -120,9 +130,11 @@ def excelsify(file):
             if method in VALID_METHODS:
                 # parameters
                 parameters = get_parameters(method_details.get('parameters'))
-                st.table(parameters)
+                with st.expander('Parameters'):
+                    st.table(parameters)
                 request_body = get_request_body(method_details.get('requestBody'), spec)
-                st.table(request_body)
+                with st.expander('Request body'):
+                    st.table(request_body)
                 # response = get_response()
                 excel=write_to_excel(parameters, request_body)
 
