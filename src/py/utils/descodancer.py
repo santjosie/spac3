@@ -50,10 +50,8 @@ def update_descriptions(schema, spec, path, description_map, visited_refs=None):
         properties = schema.get('properties', {})
         for prop_name, prop_schema in properties.items():
             full_path = f"{path}.{prop_name}" if path else prop_name
-            st.write(path +'.'+prop_name)
             # Update description if present in the map
             if full_path in description_map:
-                st.write('in : ' + path + '.' + prop_name)
                 #had a description that has been removed or updated
                 if 'description' in prop_schema and prop_schema['description'] != description_map[full_path]:
                     UPDATES_TABLE.append({'name': prop_name

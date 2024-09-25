@@ -42,20 +42,18 @@ def resolve_ref(ref, spec):
     """
     Resolve a JSON Reference ($ref) within the OpenAPI specification.
     """
-    ref_path = ref.lstrip('#/').split('/')[-1]
-    st.write(ref_path)
+    ref_path = ref.lstrip('#/').split('/')
     result = spec
-    #for part in ref_path:
-    result = result.get(ref_path, {})
-    st.write(result)
-    return result
+    for part in ref_path:
+        result = result.get(part, {})
+    return result, ref_path[-1]
 
 def extract_attributes(schema, spec, parent_path='', visited_refs=None, attributes=None, object_name=None):
     """
     Recursively extract attributes from the schema.
     """
     if visited_refs is None:
-        visited_refs = [] #set()
+        visited_refs = []
     if attributes is None:
         attributes = []
 
@@ -64,8 +62,8 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
         if ref in visited_refs:
             return attributes  # Avoid infinite recursion
         visited_refs.append(ref)
-        resolved_schema = resolve_ref(ref, spec)
-        return extract_attributes(resolved_schema, spec, parent_path, visited_refs, attributes)
+        resolved_schema, schema_name = resolve_ref(ref, spec)
+        return extract_attributes(resolved_schema, spec, parent_path, visited_refs, attributes, schema_name)
 
     if 'allOf' in schema:
         for subschema in schema['allOf']:
@@ -78,12 +76,11 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
             extract_attributes(subschema, spec, parent_path, visited_refs, attributes)
 
     elif schema.get('type') == 'object':
-        schema_name = visited_refs[-1].split('/')[-1]
-        #st.write('schema name: ' + schema_name + ' parent_path: ' +parent_path)
-        full_path = parent_path
+        full_path = f"{parent_path}" if parent_path else object_name
+        parent_path = f"{parent_path}" if parent_path else object_name
         attributes.append({
             'full_path': full_path,
-            'name': schema_name,
+            'name': object_name,
             'type': schema.get('type'),
             'description': schema.get('description')
         })
@@ -102,21 +99,25 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
                     })
             # Recursively process if it's an object or array
             if attr_type in ['object', 'array']:
-                extract_attributes(prop_schema, spec, full_path, visited_refs.copy(), attributes)
+                extract_attributes(prop_schema, spec, full_path, visited_refs.copy(), attributes, prop_name)
     elif schema.get('type') == 'array':
-        schema_name = visited_refs[-1].split('/')[-1]
-        #st.write('schema name: ' + schema_name + ' parent_path: ' +parent_path)
         full_path = parent_path
         attributes.append({
             'full_path': full_path,
-            'name': schema_name,
+            'name': object_name,
             'type': schema.get('type'),
             'description': schema.get('description')
         })
         items_schema = schema.get('items', {})
-        extract_attributes(items_schema, spec, parent_path, visited_refs.copy(), attributes)
+        extract_attributes(items_schema, spec, full_path, visited_refs.copy(), attributes, object_name)
     else:
-        pass
+        # Append attributes for native data types
+        attributes.append({
+            'full_path': parent_path,
+            'name': object_name,
+            'type': schema.get('type', ''),
+            'description': schema.get('description', '')
+        })
     return attributes
 
 def get_response(response):
