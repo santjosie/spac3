@@ -1,6 +1,5 @@
 import streamlit as st
-from utils.excelsior import excelsify
-from utils.descodancer import descode
+from utils.excelsior import excelsify, descode
 
 def main():
     st.set_page_config(
