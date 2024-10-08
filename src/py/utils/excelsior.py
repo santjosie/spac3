@@ -20,13 +20,20 @@ def get_parameters(parameters):
                                         , "description": parameter.get('schema').get('description')})
         return parameters_table
 
-def get_req_resp_body(body, spec):
-    if body:
-        body_content = body.get('content')
-        if 'application/json' in body_content:
-            schema = body_content['application/json'].get('schema', {})
-            attributes_table = extract_attributes(schema, spec)
-            return attributes_table
+def get_req_resp_body(body, spec, type):
+    if type == 'request':
+        if body:
+            body_content = body.get('content')
+            if 'application/json' in body_content:
+                schema = body_content['application/json'].get('schema', {})
+                attributes_table = extract_attributes(schema, spec)
+                return attributes_table
+    else:
+        if body:
+            if '200' in body:
+                schema = body['200'].get('content').get('application/json').get('schema', {})
+                attributes_table = extract_attributes(schema, spec)
+                return attributes_table
 
 def resolve_ref(ref, spec):
     """
@@ -48,6 +55,7 @@ def append_attribute(full_path, name, type, description, attributes):
     return attributes
 
 def update_descriptions(full_path, schema, new_description):
+    global UPDATES_TABLE
     if 'description' in schema and schema['description'] != new_description:
         UPDATES_TABLE.append({'name': full_path
                                  , 'old_description': schema['description']
@@ -83,21 +91,22 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
 
     if 'allOf' in schema:
         for subschema in schema['allOf']:
-            extract_attributes(subschema, spec, parent_path, visited_refs, attributes)
+            extract_attributes(subschema, spec, parent_path, visited_refs, attributes, mode=mode, description_map=description_map)
     elif 'anyOf' in schema:
         for subschema in schema['anyOf']:
-            extract_attributes(subschema, spec, parent_path, visited_refs, attributes)
+            extract_attributes(subschema, spec, parent_path, visited_refs, attributes, mode=mode, description_map=description_map)
     elif 'oneOf' in schema:
         for subschema in schema['oneOf']:
-            extract_attributes(subschema, spec, parent_path, visited_refs, attributes)
+            extract_attributes(subschema, spec, parent_path, visited_refs, attributes, mode=mode, description_map=description_map)    
 
     elif schema.get('type') == 'object':
         parent_path = f"{parent_path}.{object_name}" if parent_path else object_name
         if mode in ['extract', 'schemas']:
             append_attribute(parent_path, object_name, schema.get('type'), schema.get('description'), attributes)
         else:
-            update_descriptions(parent_path, schema, description_map[parent_path])
-            schema['description'] = description_map[parent_path]
+            if parent_path in description_map:
+                update_descriptions(parent_path, schema, description_map[parent_path])
+                schema['description'] = description_map[parent_path]
         properties = schema.get('properties', {})
         for prop_name, prop_schema in properties.items():
             attr_type = prop_schema.get('type', '$ref')
@@ -107,8 +116,9 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
                 if mode in ['extract', 'schemas']:
                     append_attribute(full_path, prop_name, attr_type, prop_schema.get('description', ''),attributes)
                 else:
-                    update_descriptions(full_path, prop_schema, description_map[full_path])
-                    prop_schema['description'] = description_map[full_path]
+                    if full_path in description_map:
+                        update_descriptions(full_path, prop_schema, description_map[full_path])
+                        prop_schema['description'] = description_map[full_path]
             # Recursively process if it's an object or array
             if attr_type == '$ref':
                 if mode=='schemas':
@@ -136,8 +146,9 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
         if mode in ['extract', 'schemas']:
             append_attribute(parent_path, object_name, schema.get('type'), schema.get('description'), attributes)
         else:
-            update_descriptions(parent_path, schema, description_map[parent_path])
-            schema['description'] = description_map[parent_path]
+            if parent_path in description_map:
+                update_descriptions(parent_path, schema, description_map[parent_path])
+                schema['description'] = description_map[parent_path]
         items_schema = schema.get('items', {})
         if '$ref' in items_schema and mode=='schemas':
             pass
@@ -157,8 +168,9 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
         if mode in ['extract', 'schemas']:
             append_attribute(parent_path, item_name, schema.get('type'), schema.get('description'), attributes)
         else:
-            update_descriptions(parent_path, schema, description_map[parent_path])
-            schema['description'] = description_map[parent_path]
+            if parent_path in description_map:
+                update_descriptions(parent_path, schema, description_map[parent_path])
+                schema['description'] = description_map[parent_path]
 
     if mode in ['extract', 'schemas']:
         return attributes
@@ -175,9 +187,14 @@ def excelsify(file):
                     st.table(parameters)
 
                 #request body
-                request_body = get_req_resp_body(method_details.get('requestBody'), spec)
+                request_body = get_req_resp_body(method_details.get('requestBody'), spec, type='request')
                 with st.expander('Request body'):
                     st.table(request_body)
+
+                #response body
+                response_body = get_req_resp_body(method_details.get('responses'), spec, type='response')
+                with st.expander('Response body'):
+                    st.table(response_body)
 
                 #schemas
                 schemas = spec.get('components', {}).get('schemas', {})
@@ -190,7 +207,7 @@ def excelsify(file):
                     st.table(schema_attributes)
 
                 # response = get_response()
-                excel=write_to_excel(parameters, request_body, schema_attributes)
+                excel=write_to_excel(parameters, request_body, response_body, schema_attributes)
 
     return excel
 
@@ -198,7 +215,7 @@ def descode(excel_file, spec_file):
     global UPDATES_TABLE
     UPDATES_TABLE =[]
     # Read Excel file into DataFrame
-    df_attributes = pd.read_excel(excel_file, sheet_name='attributes')
+    df_attributes = pd.read_excel(excel_file, sheet_name='schemas')
     df_attributes = df_attributes.replace({np.nan: None})
     # Ensure required columns are present
     required_columns = ['full_path', 'name', 'description']
@@ -207,7 +224,6 @@ def descode(excel_file, spec_file):
         return
 
     description_map = pd.Series(df_attributes['description'].values, index=df_attributes['full_path']).to_dict()
-    st.write(description_map)
     spec = load_oapi_spec(spec_file)
 
     # deep copy of spec to avoid modifying the original
@@ -218,7 +234,11 @@ def descode(excel_file, spec_file):
     schemas = components.get('schemas', {})
     for schema_name, schema in schemas.items():
         schema_path = schema_name  # Top-level schema name
-        extract_attributes(schema, updated_spec, schema_path, description_map)
+        extract_attributes(schema=schema,
+                           spec=updated_spec,
+                           object_name=schema_path,
+                           description_map=description_map,
+                           mode='update')
 
     # Output the updated spec
     st.subheader('List of changes')

@@ -16,7 +16,7 @@ def load_oapi_spec(file):
         spec = json.load(file)
     return spec
 
-def write_to_excel(parameters, attributes, schema_attributes):
+def write_to_excel(parameters, request_body, response_body, schema_attributes):
     """
     writes tables passed as parameters in separate spreadsheets in an Excel file in memory
     :param parameters:
@@ -24,14 +24,16 @@ def write_to_excel(parameters, attributes, schema_attributes):
     :return:
     """
     df_parameters = pd.DataFrame(parameters)
-    df_attributes = pd.DataFrame(attributes)
+    df_request_body = pd.DataFrame(request_body)
+    df_response_body = pd.DataFrame(response_body)
     df_schemas = pd.DataFrame(schema_attributes)
 
     output = io.BytesIO()
 
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_parameters.to_excel(writer, sheet_name='parameters', index=False)
-        df_attributes.to_excel(writer, sheet_name='attributes', index=False)
+        df_request_body.to_excel(writer, sheet_name='request_body', index=False)
+        df_response_body.to_excel(writer, sheet_name='response_body', index=False)
         df_schemas.to_excel(writer, sheet_name='schemas', index=False)
 
     output.seek(0)
