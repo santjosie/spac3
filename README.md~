@@ -4,9 +4,4 @@ Use spac3 to manage descriptions of attributes in OpenAPI document. space3 reads
 
 Works with OpenAPI documents in both yaml and json formats.
 
-## See it in action
-
 ## OpenAPI specifications currently supported
-
-
-## Contributing

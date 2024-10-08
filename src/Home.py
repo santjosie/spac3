@@ -8,7 +8,7 @@ def main():
         layout='wide',
         menu_items={
             'Get help': 'https://www.santhoshjose.dev',
-            'Report a bug': 'https://www.santhoshjose.dev',
+            'Report a bug': 'https://github.com/santjosie/spac3/issues',
             'About': '# Version: 2.2 #'
         })
     st.header("Spac3!")
