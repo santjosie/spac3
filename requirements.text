@@ -2,3 +2,4 @@ streamlit
 pyyaml
 openpyxl
 pandas
+pytest

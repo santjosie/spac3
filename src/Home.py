@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.excelsior import excelsify, descode
+from src.utils.excelsior import excelsify, descode
 
 def main():
     st.set_page_config(
@@ -8,7 +8,7 @@ def main():
         layout='wide',
         menu_items={
             'Get help': 'https://www.santhoshjose.dev',
-            'Report a bug': 'https://www.santhoshjose.dev',
+            'Report a bug': 'https://github.com/santjosie/spac3/issues',
             'About': '# Version: 2.2 #'
         })
     st.header("Spac3!")
