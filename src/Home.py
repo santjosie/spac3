@@ -1,5 +1,6 @@
 import streamlit as st
-from src.utils.excelsior import excelsify, descode
+from utils.excelsior import excelsify, descode
+from utils.schema_parser import excelsifyer
 
 def main():
     st.set_page_config(
@@ -15,13 +16,16 @@ def main():
     st.caption("OpenAPI spec management platform")
 
 def converter_tabs():
-    toexceltab, tospectab = st.tabs(["OAPI 2 Excel", "Excel 2 OAPI"])
+    toexceltab, tospectab, tosandbox = st.tabs(["OAPI 2 Excel", "Excel 2 OAPI", "Sandbox"])
 
     with toexceltab:
         oapi_to_excel()
 
     with tospectab:
         excel_to_oapi()
+
+    with tosandbox:
+        sandbox()
 
 def oapi_to_excel():
     uploaded_file = st.file_uploader(label="Convert OpenAPI documents to MS Excel files",
@@ -56,6 +60,19 @@ def excel_to_oapi():
                                 data=updated_spec_file,
                                 file_name='open_api_spec.yaml',
                                 mime='application/octet-stream')
+
+def sandbox():
+    uploaded_file = st.file_uploader(label="SANDBOX MODE: Convert OpenAPI documents to MS Excel files",
+                                          type=["yaml","yml","json"], accept_multiple_files=False)
+    if uploaded_file:
+        st.divider()
+        excel = excelsifyer(uploaded_file)
+        if excel:
+            st.download_button(label='Download',
+                               type='primary',
+                               data=excel,
+                               file_name='open_api_spec.xlsx',
+                               mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
