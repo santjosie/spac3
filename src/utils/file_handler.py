@@ -36,17 +36,15 @@ def write_to_excel(parameters=None, request_body=None, response_body=None, schem
     output = io.BytesIO()
 
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        if df_parameters:
+        if df_parameters is not None:
             df_parameters.to_excel(writer, sheet_name='parameters', index=False)
-        if df_request_body:
+        if df_request_body is not None:
             df_request_body.to_excel(writer, sheet_name='request_body', index=False)
-        if response_body:
+        if response_body is not None:
             df_response_body.to_excel(writer, sheet_name='response_body', index=False)
-        if df_schemas:
-            st.write('mellow')
+        if df_schemas is not None:
             df_schemas.to_excel(writer, sheet_name='schemas', index=False)
 
-    st.write('mewo')
     output.seek(0)
 
     return output
