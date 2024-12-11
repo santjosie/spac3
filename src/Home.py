@@ -1,6 +1,5 @@
 import streamlit as st
-from utils.excelsior import excelsify, descode
-from utils.schema_parser import excelsifyer
+
 
 def main():
     st.set_page_config(
@@ -15,66 +14,19 @@ def main():
     st.header("Spac3!")
     st.caption("OpenAPI spec management platform")
 
-def converter_tabs():
-    toexceltab, tospectab, tosandbox = st.tabs(["OAPI 2 Excel", "Excel 2 OAPI", "Sandbox"])
+def navigator():
+    pages = {"":
+        [st.Page("Home.py", title="Home")],
+             "Excelsior":
+             [st.Page(page="pg/pg_excelsior.py", title="Convert to Excel"),
+              st.Page(page="pg/pg_descoder.py", title="Convert to OpenAPI"),
+              st.Page(page="pg/pg_sandbox.py", title="Sandbox")],
+    }
 
-    with toexceltab:
-        oapi_to_excel()
-
-    with tospectab:
-        excel_to_oapi()
-
-    with tosandbox:
-        sandbox()
-
-def oapi_to_excel():
-    uploaded_file = st.file_uploader(label="Convert OpenAPI documents to MS Excel files",
-                                          type=["yaml","yml","json"], accept_multiple_files=False)
-    if uploaded_file:
-        st.divider()
-        excel = excelsify(uploaded_file)
-        if excel:
-            st.download_button(label='Download',
-                               type='primary',
-                               data=excel,
-                               file_name='open_api_spec.xlsx',
-                               mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-def excel_to_oapi():
-    st.subheader("Excel 2 OpenAPI")
-    excelcol, spec_col = st.columns(2)
-    with spec_col:
-        uploaded_spec_file = st.file_uploader(label="Upload the open API spec that you want to update the descriptions for ",
-                                               type=["yaml", "yml", "json"], accept_multiple_files=False)
-
-    with excelcol:
-        uploaded_excel_file = st.file_uploader(label="Upload the open Excel file that you want to merge with your spec ",
-                                          type=["xlsx"], accept_multiple_files=False)
-
-    if uploaded_spec_file and uploaded_excel_file:
-        st.divider()
-        updated_spec_file = descode(uploaded_excel_file, uploaded_spec_file)
-        if updated_spec_file:
-            st.download_button(label='Download',
-                               type = 'primary',
-                                data=updated_spec_file,
-                                file_name='open_api_spec.yaml',
-                                mime='application/octet-stream')
-
-def sandbox():
-    uploaded_file = st.file_uploader(label="SANDBOX MODE: Convert OpenAPI documents to MS Excel files",
-                                          type=["yaml","yml","json"], accept_multiple_files=False)
-    if uploaded_file:
-        st.divider()
-        excel = excelsifyer(uploaded_file)
-        if excel:
-            st.download_button(label='Download',
-                               type='primary',
-                               data=excel,
-                               file_name='open_api_spec.xlsx',
-                               mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    pg = st.navigation(pages=pages, expanded=True)
+    pg.run()
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()
-    converter_tabs()
+    navigator()

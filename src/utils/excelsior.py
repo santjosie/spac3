@@ -241,6 +241,7 @@ def descode(excel_file, spec_file):
                            mode='update')
 
     # Output the updated spec
+    st.metric(label="Number of changes", value = len(UPDATES_TABLE))
     st.subheader('List of changes')
     st.table(UPDATES_TABLE)
 
