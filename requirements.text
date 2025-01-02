@@ -3,4 +3,4 @@ pyyaml
 openpyxl
 pandas
 pytest
-yaml
+pyyaml
