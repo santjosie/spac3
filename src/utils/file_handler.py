@@ -2,7 +2,6 @@ import yaml
 import json
 import pandas as pd
 import io
-import streamlit as st
 
 def load_oapi_spec(file):
     """
