@@ -31,7 +31,6 @@ def get_req_resp_body(body, spec, type):
     else:
         if body:
             if '200' in body:
-                st.write(body)
                 schema = body['200'].get('content').get('application/json').get('schema', {})
                 attributes_table = extract_attributes(schema, spec)
                 return attributes_table

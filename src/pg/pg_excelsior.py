@@ -1,5 +1,6 @@
 import streamlit as st
 from utils.excelsior import excelsify, descode
+import os
 
 def oapi_to_excel():
     uploaded_file = st.file_uploader(label="Convert OpenAPI documents to MS Excel files",
@@ -8,10 +9,11 @@ def oapi_to_excel():
         st.divider()
         excel = excelsify(uploaded_file)
         if excel:
+            excel_name, ext = os.path.splitext(uploaded_file.name)
             st.download_button(label='Download',
                                type='primary',
                                data=excel,
-                               file_name=uploaded_file.name+'.xlsx',
+                               file_name=excel_name+'.xlsx',
                                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             st.toast(body="OpenAPI document converted to Excel!", icon=":material/thumb_up:")
 
