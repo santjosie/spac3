@@ -11,7 +11,7 @@ def oapi_to_excel():
             st.download_button(label='Download',
                                type='primary',
                                data=excel,
-                               file_name='open_api_spec.xlsx',
+                               file_name=uploaded_file.name+'.xlsx',
                                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             st.toast(body="OpenAPI document converted to Excel!", icon=":material/thumb_up:")
 
