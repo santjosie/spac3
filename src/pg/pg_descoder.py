@@ -18,7 +18,7 @@ def excel_to_oapi():
             st.download_button(label='Download',
                                type = 'primary',
                                 data=updated_spec_file,
-                                file_name='open_api_spec.yaml',
+                                file_name=uploaded_spec_file.name,
                                 mime='application/octet-stream')
         st.toast(body="Excel converted to OpenAPI document!", icon=":material/thumb_up:")
 

@@ -1,9 +1,4 @@
-import streamlit as st
-import json
 from typing import Dict, List
-
-import yaml
-from utils import excelsior as excel
 
 def check_and_convert_casing(openapi_spec: Dict) -> Dict:
 
@@ -33,17 +28,3 @@ def check_and_convert_casing(openapi_spec: Dict) -> Dict:
         }
 
     return openapi_spec
-
-def body():
-    spec = st.file_uploader("Yaml file")
-    if spec:
-        spec_data = excel.load_oapi_spec(spec)
-        openapi_spec_pascal_case = check_and_convert_casing(spec_data)
-        st.download_button(label='Download',
-                           type='primary',
-                           data=yaml.dump(openapi_spec_pascal_case),
-                           file_name='open_api_spec.yaml',
-                           mime='application/octet-stream')
-
-
-body()
