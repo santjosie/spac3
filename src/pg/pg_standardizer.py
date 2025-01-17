@@ -15,10 +15,19 @@ def body():
             if standardize:
                 for spec_file in spec_files:
                     spec_data = file_handler.load_oapi_spec(spec_file)
-                    openapi_spec_pascal_case = standardizer.check_and_convert_casing(spec_data)
+                    if convert_case:
+                        spec_data = standardizer.check_and_convert_casing(spec_data)
+                    if error_response:
+                        spec_data = standardizer.process_error_response(spec_data)
+                    if pagination:
+                        spec_data = standardizer.process_pagination(spec_data)
+                    if message:
+                        spec_data = standardizer.process_message(spec_data)
+                    if header:
+                        spec_data = standardizer.process_header(spec_data)
                     st.download_button(label='Download',
                                type='primary',
-                               data=yaml.dump(openapi_spec_pascal_case),
+                               data=yaml.dump(spec_data),
                                file_name=spec_file.name,
                                mime='application/octet-stream')
 
