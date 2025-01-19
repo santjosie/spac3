@@ -1,38 +1,66 @@
 from typing import Dict, List
-import yaml
+import streamlit as st
 
 # Hard-coded Pagination schema definition
 PAGINATION_SCHEMA = {
     "Pagination": {
         "type": "object",
+        "description": "Pagination details.",
         "properties": {
-            "total": {
-                "type": "integer"
+            "CurrentPage": {
+                "type": "integer",
+                "description": "Current page number.",
+                "examples": [1]
             },
-            "page": {
-                "type": "integer"
+            "PageSize": {
+                "type": "integer",
+                "description": "Number of records per page.",
+                "examples": [10]
             },
-            "size": {
-                "type": "integer"
-            }
-        },
-        "required": ["total", "page", "size"]
+            "NextPage": {
+                "type": "integer",
+                "description": "Next page number.",
+                "examples": [2]
+            },
+            "TotalRecords": {
+                "type": "integer",
+                "description": "Total number of records.",
+                "examples": [100]
+            },
+            "TotalPages": {
+                "type": "integer",
+                "description": "Total number of pages.",
+                "examples": [10]
+            },
+        }
     }
 }
 
-# Hard-coded Messages schema definition
 MESSAGES_SCHEMA = {
     "Messages": {
-        "type": "object",
-        "properties": {
-            "messages": {
-                "type": "array",
-                "items": {
-                    "type": "string"
+        "type": "array",
+        "title": "Messages",
+        "description": "Messages returned while processing the request.",
+        "items": {
+            "type": "object",
+            "title": "Message",
+            "properties": {
+                "Code": {
+                    "type": "string",
+                    "description": "Unique identifier for the message.",
+                    "examples": [
+                        "ITRVL_CRUISE_AVAIL_SYS_00001"
+                    ]
+                },
+                "Message": {
+                    "type": "string",
+                    "description": "Message returned while processing the request.",
+                    "examples": [
+                        "There are no cruises matching the search criteria. Please try modifying the search."
+                    ]
                 }
             }
-        },
-        "required": ["messages"]
+        }
     }
 }
 
@@ -57,25 +85,93 @@ NEW_HEADER_PARAMETERS = [
     }
 ]
 
-# Hard-coded ErrorResponse schema definition
 ERROR_RESPONSE_SCHEMA = {
     "ErrorResponse": {
         "type": "object",
+        "title": "ErrorResponse",
+        "description": "Object returned when the API processing fails.",
         "properties": {
-            "error": {
-                "type": "string"
-            },
-            "message": {
-                "type": "string"
+            "Errors": {
+                "type": "array",
+                "title": "Errors",
+                "description": "List of errors encountered while processing the request.",
+                "items": {
+                    "type": "object",
+                    "title": "Error",
+                    "properties": {
+                        "Code": {
+                            "type": "string",
+                            "description": "Error code.",
+                            "examples": [
+                                "SYS_005"
+                            ]
+                        },
+                        "Message": {
+                            "type": "string",
+                            "description": "Error message.",
+                            "examples": [
+                                "System Error Occurred"
+                            ]
+                        },
+                        "Severity": {
+                            "type": "string",
+                            "enum": [
+                                "ERROR",
+                                "WARN",
+                                "INFO",
+                                "FINE"
+                            ],
+                            "description": "Severity of the error."
+                        },
+                        "CorrelationId": {
+                            "type": "string",
+                            "description": "This is a reference to the transaction id of the error.",
+                            "examples": [
+                                "f2d39f5f5e432f4dd34520d63923808c-2131397101"
+                            ]
+                        }
+                    }
+                }
             }
-        },
-        "required": ["error", "message"]
+        }
     }
 }
 
-def process_pagination(openapi_spec):
+def remove_path_servers(spec):
+
+    # Check for the existence of a node called 'servers' under each path and delete it if it exists
+    for path, methods in spec.get('paths', {}).items():
+        if 'servers' in methods:
+            del methods['servers']
+
+    return spec
+
+def remove_non_json_content(spec):
+
+    # Check for the existence of request body and remove non-application/json content types
+    for path, methods in spec.get('paths', {}).items():
+        for method, details in methods.items():
+            if 'requestBody' in details:
+                content = details['requestBody'].get('content', {})
+                for content_type in list(content.keys()):
+                    if content_type != 'application/json':
+                        del content[content_type]
+
+    # Check for the existence of response bodies and remove non-application/json content types
+    for path, methods in spec.get('paths', {}).items():
+        for method, details in methods.items():
+            if 'responses' in details:
+                for response in details['responses'].values():
+                    content = response.get('content', {})
+                    for content_type in list(content.keys()):
+                        if content_type != 'application/json':
+                            del content[content_type]
+
+    return spec
+
+def process_pagination(spec):
     # Load the OpenAPI spec from YAML
-    spec = yaml.safe_load(openapi_spec)
+    #spec = yaml.safe_load(openapi_spec)
 
     # Insert the Pagination schema into the components section
     if 'components' not in spec:
@@ -95,17 +191,16 @@ def process_pagination(openapi_spec):
                         if schema_ref:
                             schema_name = schema_ref.split('/')[-1]
                             if schema_name in spec['components']['schemas']:
-                                spec['components']['schemas'][schema_name]['properties']['pagination'] = {
+                                spec['components']['schemas'][schema_name]['properties']['Pagination'] = {
                                     "$ref": "#/components/schemas/Pagination"
                                 }
 
-    # Dump the updated spec back to YAML
-    return yaml.dump(spec)
+    return spec
 
 
-def process_messages(openapi_spec):
+def process_message(spec):
     # Load the OpenAPI spec from YAML
-    spec = yaml.safe_load(openapi_spec)
+    #spec = yaml.safe_load(openapi_spec)
 
     # Insert the Messages schema into the components section
     if 'components' not in spec:
@@ -125,16 +220,13 @@ def process_messages(openapi_spec):
                         if schema_ref:
                             schema_name = schema_ref.split('/')[-1]
                             if schema_name in spec['components']['schemas']:
-                                spec['components']['schemas'][schema_name]['properties']['messages'] = {
+                                spec['components']['schemas'][schema_name]['properties']['Messages'] = {
                                     "$ref": "#/components/schemas/Messages"
                                 }
 
-    # Dump the updated spec back to YAML
-    return yaml.dump(spec)
+    return spec
 
-def process_header(openapi_spec):
-    # Load the OpenAPI spec from YAML
-    spec = yaml.safe_load(openapi_spec)
+def process_header(spec):
 
     # Remove all header parameters
     for path, methods in spec.get('paths', {}).items():
@@ -149,12 +241,11 @@ def process_header(openapi_spec):
                 details['parameters'] = []
             details['parameters'].extend(NEW_HEADER_PARAMETERS)
 
-    # Dump the updated spec back to YAML
-    return yaml.dump(spec)
+    return spec
 
-def process_error_response(openapi_spec):
+def process_error_response(spec):
     # Load the OpenAPI spec from YAML
-    spec = yaml.safe_load(openapi_spec)
+    #spec = yaml.safe_load(openapi_spec)
 
     # Check and update/add ErrorResponse schema
     if 'components' not in spec:
@@ -182,19 +273,20 @@ def process_error_response(openapi_spec):
                     }
 
     # Dump the updated spec back to YAML
-    return yaml.dump(spec)
+    #return yaml.dump(spec)
+    return spec
 
-def check_and_convert_casing(openapi_spec: Dict) -> Dict:
+def check_and_convert_casing(openapi_spec):
 
-    def to_pascal_case(name: str) -> str:
-        """Converts a string to PascalCase."""
+    def camel_to_pascal_case(name: str) -> str:
+        """Converts SnakeCase to PascalCase."""
         return name[0].upper() + name[1:]
 
     def process_schema(schema: Dict) -> Dict:
         """Processes a single schema to check and convert casing."""
         if 'properties' in schema:
             schema['properties'] = {
-                to_pascal_case(key): process_properties(value)
+                camel_to_pascal_case(key): process_properties(value)
                 for key, value in schema['properties'].items()
             }
         return schema
@@ -205,10 +297,51 @@ def check_and_convert_casing(openapi_spec: Dict) -> Dict:
             properties = process_schema(properties)
         return properties
 
-    if 'components' in openapi_spec and 'schemas' in openapi_spec['components']:
-        openapi_spec['components']['schemas'] = {
-            to_pascal_case(key): process_schema(value)
-            for key, value in openapi_spec['components']['schemas'].items()
-        }
+    def update_references(spec: Dict, old_name: str, new_name: str):
+        """Updates references to the schema with the new name."""
+        for path, methods in spec.get('paths', {}).items():
+            for method, details in methods.items():
+                if 'requestBody' in details:
+                    content = details['requestBody'].get('content', {})
+                    for content_type, media_type in content.items():
+                        if '$ref' in media_type.get('schema', {}):
+                            ref = media_type['schema']['$ref']
+                            if ref.endswith(f"/{old_name}"):
+                                media_type['schema']['$ref'] = ref.replace(f"/{old_name}", f"/{new_name}")
+                if 'responses' in details:
+                    for response in details['responses'].values():
+                        content = response.get('content', {})
+                        for content_type, media_type in content.items():
+                            if '$ref' in media_type.get('schema', {}):
+                                ref = media_type['schema']['$ref']
+                                if ref.endswith(f"/{old_name}"):
+                                    media_type['schema']['$ref'] = ref.replace(f"/{old_name}", f"/{new_name}")
+
+                if 'components' in spec and 'schemas' in spec['components']:
+                    for schema_name, schema in spec['components']['schemas'].items():
+                        if '$ref' in schema.get('properties', {}):
+                            ref = schema['properties']['$ref']
+                            if ref.endswith(f"/{old_name}"):
+                                schema['properties']['$ref'] = ref.replace(f"/{old_name}", f"/{new_name}")
+
+    components = openapi_spec['components']
+
+    if components and 'schemas' in components:
+        updated_schemas = {}
+        for key, value in components['schemas'].items():
+            new_key = camel_to_pascal_case(key)
+            updated_schemas[new_key] = process_schema(value)
+            update_references(openapi_spec, key, new_key)
+        components['schemas'] = updated_schemas
+
+    if components:
+        openapi_spec['components'] = components
 
     return openapi_spec
+"""
+    if 'components' in openapi_spec and 'schemas' in openapi_spec['components']:
+        openapi_spec['components']['schemas'] = {
+            camel_to_pascal_case(key): process_schema(value)
+            for key, value in openapi_spec['components']['schemas'].items()
+        }
+"""

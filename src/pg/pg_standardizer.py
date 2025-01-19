@@ -10,6 +10,8 @@ def body():
         pagination = st.toggle(label="Add pagination?", value=True)
         message = st.toggle(label="Add message?", value=True)
         header = st.toggle(label="Add header?", value=True)
+        remove_path_server = st.toggle(label="Remove path server?", value=True)
+        remove_non_json_content = st.toggle(label="Remove non-json payload content?", value=True)
         if convert_case or error_response or pagination or message or header:
             standardize = st.button(label="Standardize")
             if standardize:
@@ -25,6 +27,10 @@ def body():
                         spec_data = standardizer.process_message(spec_data)
                     if header:
                         spec_data = standardizer.process_header(spec_data)
+                    if remove_path_server:
+                        spec_data = standardizer.remove_path_servers(spec_data)
+                    if remove_non_json_content:
+                        spec_data = standardizer.remove_non_json_content(spec_data)
                     st.download_button(label='Download',
                                type='primary',
                                data=yaml.dump(spec_data),
