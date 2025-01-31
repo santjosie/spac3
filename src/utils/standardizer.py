@@ -183,17 +183,18 @@ def process_pagination(spec):
     # Check for 200 or 201 response codes and update the schema
     for path, methods in spec.get('paths', {}).items():
         for method, details in methods.items():
-            for status_code in ['200', '201']:
-                if status_code in details.get('responses', {}):
-                    response = details['responses'][status_code]
-                    if 'content' in response and 'application/json' in response['content']:
-                        schema_ref = response['content']['application/json']['schema'].get('$ref')
-                        if schema_ref:
-                            schema_name = schema_ref.split('/')[-1]
-                            if schema_name in spec['components']['schemas']:
-                                spec['components']['schemas'][schema_name]['properties']['Pagination'] = {
-                                    "$ref": "#/components/schemas/Pagination"
-                                }
+            if method in ['get', 'post', 'put', 'delete', 'patch']:
+                for status_code in ['200', '201']:
+                    if status_code in details.get('responses', {}):
+                        response = details['responses'][status_code]
+                        if 'content' in response and 'application/json' in response['content']:
+                            schema_ref = response['content']['application/json']['schema'].get('$ref')
+                            if schema_ref:
+                                schema_name = schema_ref.split('/')[-1]
+                                if schema_name in spec['components']['schemas']:
+                                    spec['components']['schemas'][schema_name]['properties']['Pagination'] = {
+                                        "$ref": "#/components/schemas/Pagination"
+                                    }
 
     return spec
 
@@ -212,17 +213,18 @@ def process_message(spec):
     # Check for 200 or 201 response codes and update the schema
     for path, methods in spec.get('paths', {}).items():
         for method, details in methods.items():
-            for status_code in ['200', '201']:
-                if status_code in details.get('responses', {}):
-                    response = details['responses'][status_code]
-                    if 'content' in response and 'application/json' in response['content']:
-                        schema_ref = response['content']['application/json']['schema'].get('$ref')
-                        if schema_ref:
-                            schema_name = schema_ref.split('/')[-1]
-                            if schema_name in spec['components']['schemas']:
-                                spec['components']['schemas'][schema_name]['properties']['Messages'] = {
-                                    "$ref": "#/components/schemas/Messages"
-                                }
+            if method in ['get', 'post', 'put', 'delete', 'patch']:
+                for status_code in ['200', '201']:
+                    if status_code in details.get('responses', {}):
+                        response = details['responses'][status_code]
+                        if 'content' in response and 'application/json' in response['content']:
+                            schema_ref = response['content']['application/json']['schema'].get('$ref')
+                            if schema_ref:
+                                schema_name = schema_ref.split('/')[-1]
+                                if schema_name in spec['components']['schemas']:
+                                    spec['components']['schemas'][schema_name]['properties']['Messages'] = {
+                                        "$ref": "#/components/schemas/Messages"
+                                    }
 
     return spec
 
@@ -237,9 +239,10 @@ def process_header(spec):
     # Add new header parameters
     for path, methods in spec.get('paths', {}).items():
         for method, details in methods.items():
-            if 'parameters' not in details:
-                details['parameters'] = []
-            details['parameters'].extend(NEW_HEADER_PARAMETERS)
+            if method in ['get', 'post', 'put', 'delete', 'patch']:
+                if 'parameters' not in details:
+                    details['parameters'] = []
+                details['parameters'].extend(NEW_HEADER_PARAMETERS)
 
     return spec
 
@@ -257,20 +260,21 @@ def process_error_response(spec):
     # Check and update/add error response codes
     for path, methods in spec.get('paths', {}).items():
         for method, details in methods.items():
-            if 'responses' not in details:
-                details['responses'] = {}
-            for status_code in ['422', '500']:
-                if status_code not in details['responses']:
-                    details['responses'][status_code] = {
-                        "description": "Error response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
+            if method in ['get', 'post', 'put', 'delete', 'patch']:
+                if 'responses' not in details:
+                    details['responses'] = {}
+                for status_code in ['422', '500']:
+                    if status_code not in details['responses']:
+                        details['responses'][status_code] = {
+                            "description": "Error response",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/ErrorResponse"
+                                    }
                                 }
                             }
                         }
-                    }
 
     # Dump the updated spec back to YAML
     #return yaml.dump(spec)
