@@ -4,6 +4,7 @@ import numpy as np
 import copy
 import yaml
 from .file_handler import load_oapi_spec, write_to_excel
+import ast
 
 VALID_METHODS = {'get', 'post'} #, 'put', 'patch', 'delete', 'head', 'options', 'trace', 'connect'}
 UPDATES_TABLE =[]
@@ -367,6 +368,12 @@ def excelsify(file):
 
     return excel
 
+def convert_string_to_list(string):
+    if string:
+        return ast.literal_eval(string)
+    else:
+        return None
+
 def descode(excel_file, spec_file):
     global UPDATES_TABLE
     UPDATES_TABLE =[]
@@ -381,7 +388,7 @@ def descode(excel_file, spec_file):
 
     #description_map = pd.Series(df_attributes['description'].values, index=df_attributes['full_path']).to_dict()
     description_map = pd.Series(
-        df_attributes.apply(lambda row: (row['description'], row['type'], row['format'], row['examples'], row['enum'], row['example']), axis=1).values,
+        df_attributes.apply(lambda row: (row['description'], row['type'], row['format'], convert_string_to_list(row['examples']), convert_string_to_list(row['enum']), row['example']), axis=1).values,
         index=df_attributes['full_path']).to_dict()
     spec = load_oapi_spec(spec_file)
 
