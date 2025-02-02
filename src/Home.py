@@ -19,8 +19,10 @@ def navigator():
         [st.Page("Home.py", title="Home")],
              "Excelsior":
              [st.Page(page="pg/pg_excelsior.py", title="Convert to Excel"),
-              st.Page(page="pg/pg_descoder.py", title="Convert to OpenAPI"),
-              st.Page(page="pg/pg_standardizer.py", title="Standardizer"),]
+              st.Page(page="pg/pg_descoder.py", title="Convert to OpenAPI"),],
+             "Standardizer":
+             [st.Page(page="pg/pg_standardizer.py", title="Standardize OpenAPI"),
+              st.Page(page="pg/pg_standards.py", title="Define Standards"),],
     }
 
     pg = st.navigation(pages=pages, expanded=True)
