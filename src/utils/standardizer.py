@@ -10,27 +10,27 @@ PAGINATION_SCHEMA = {
             "CurrentPage": {
                 "type": "integer",
                 "description": "Current page number.",
-                "examples": [1]
+                "example": 1
             },
             "PageSize": {
                 "type": "integer",
                 "description": "Number of records per page.",
-                "examples": [10]
+                "example": 10
             },
             "NextPage": {
                 "type": "integer",
                 "description": "Next page number.",
-                "examples": [2]
+                "example": 2
             },
             "TotalRecords": {
                 "type": "integer",
                 "description": "Total number of records.",
-                "examples": [100]
+                "example": 100
             },
             "TotalPages": {
                 "type": "integer",
                 "description": "Total number of pages.",
-                "examples": [10]
+                "example": 10
             },
         }
     }
@@ -48,16 +48,12 @@ MESSAGES_SCHEMA = {
                 "Code": {
                     "type": "string",
                     "description": "Unique identifier for the message.",
-                    "examples": [
-                        "ITRVL_CRUISE_AVAIL_SYS_00001"
-                    ]
+                    "example": "ITRVL_CRUISE_AVAIL_SYS_00001"
                 },
                 "Message": {
                     "type": "string",
                     "description": "Message returned while processing the request.",
-                    "examples": [
-                        "There are no cruises matching the search criteria. Please try modifying the search."
-                    ]
+                    "example": "There are no cruises matching the search criteria. Please try modifying the search."
                 }
             }
         }
@@ -102,16 +98,12 @@ ERROR_RESPONSE_SCHEMA = {
                         "Code": {
                             "type": "string",
                             "description": "Error code.",
-                            "examples": [
-                                "SYS_005"
-                            ]
+                            "example": "SYS_005"
                         },
                         "Message": {
                             "type": "string",
                             "description": "Error message.",
-                            "examples": [
-                                "System Error Occurred"
-                            ]
+                            "example": "System Error Occurred"
                         },
                         "Severity": {
                             "type": "string",
@@ -126,9 +118,7 @@ ERROR_RESPONSE_SCHEMA = {
                         "CorrelationId": {
                             "type": "string",
                             "description": "This is a reference to the transaction id of the error.",
-                            "examples": [
-                                "f2d39f5f5e432f4dd34520d63923808c-2131397101"
-                            ]
+                            "example": "f2d39f5f5e432f4dd34520d63923808c-2131397101"
                         }
                     }
                 }
@@ -264,8 +254,8 @@ def process_error_response(spec):
                 if 'responses' not in details:
                     details['responses'] = {}
                 for status_code in ['422', '500']:
-                    if status_code not in details['responses']:
-                        details['responses'][status_code] = {
+                    #if status_code not in details['responses']:
+                    details['responses'][status_code] = {
                             "description": "Error response",
                             "content": {
                                 "application/json": {
@@ -301,32 +291,20 @@ def check_and_convert_casing(openapi_spec):
             properties = process_schema(properties)
         return properties
 
-    def update_references(spec: Dict, old_name: str, new_name: str):
-        """Updates references to the schema with the new name."""
-        for path, methods in spec.get('paths', {}).items():
-            for method, details in methods.items():
-                if 'requestBody' in details:
-                    content = details['requestBody'].get('content', {})
-                    for content_type, media_type in content.items():
-                        if '$ref' in media_type.get('schema', {}):
-                            ref = media_type['schema']['$ref']
-                            if ref.endswith(f"/{old_name}"):
-                                media_type['schema']['$ref'] = ref.replace(f"/{old_name}", f"/{new_name}")
-                if 'responses' in details:
-                    for response in details['responses'].values():
-                        content = response.get('content', {})
-                        for content_type, media_type in content.items():
-                            if '$ref' in media_type.get('schema', {}):
-                                ref = media_type['schema']['$ref']
-                                if ref.endswith(f"/{old_name}"):
-                                    media_type['schema']['$ref'] = ref.replace(f"/{old_name}", f"/{new_name}")
-
-                if 'components' in spec and 'schemas' in spec['components']:
-                    for schema_name, schema in spec['components']['schemas'].items():
-                        if '$ref' in schema.get('properties', {}):
-                            ref = schema['properties']['$ref']
-                            if ref.endswith(f"/{old_name}"):
-                                schema['properties']['$ref'] = ref.replace(f"/{old_name}", f"/{new_name}")
+    def convert_refs(spec: Dict, old_name: str, new_name: str):
+        """
+        Recursively search for '$ref' keys in the data structure
+        and convert their values to lowercase.
+        """
+        if isinstance(spec, dict):
+            for key, value in spec.items():
+                if key == "$ref" and isinstance(value, str) and value.endswith(f"/{old_name}"):
+                    spec[key] = value.replace(f"/{old_name}", f"/{new_name}")
+                else:
+                    convert_refs(value, old_name, new_name)
+        elif isinstance(spec, list):
+            for item in spec:
+                convert_refs(item, old_name, new_name)
 
     components = openapi_spec['components']
 
@@ -335,17 +313,11 @@ def check_and_convert_casing(openapi_spec):
         for key, value in components['schemas'].items():
             new_key = camel_to_pascal_case(key)
             updated_schemas[new_key] = process_schema(value)
-            update_references(openapi_spec, key, new_key)
+            convert_refs(openapi_spec, key, new_key)
+            convert_refs(updated_schemas, key, new_key)
         components['schemas'] = updated_schemas
 
     if components:
         openapi_spec['components'] = components
 
     return openapi_spec
-"""
-    if 'components' in openapi_spec and 'schemas' in openapi_spec['components']:
-        openapi_spec['components']['schemas'] = {
-            camel_to_pascal_case(key): process_schema(value)
-            for key, value in openapi_spec['components']['schemas'].items()
-        }
-"""
