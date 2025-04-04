@@ -289,6 +289,8 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
     else:
         # Append attributes for native data types
         item_name = schema.get('title', '')
+        if item_name == "":
+            item_name = object_name
         parent_path = f"{parent_path}.{item_name}" if parent_path else item_name
         if mode in ['extract', 'schemas']:
             append_attribute(full_path=parent_path,
