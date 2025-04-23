@@ -1,6 +1,5 @@
 import streamlit as st
 
-
 def main():
     st.set_page_config(
         page_title='spac3 | Home',
@@ -15,8 +14,7 @@ def main():
     st.caption("OpenAPI spec management platform")
 
 def navigator():
-    pages = {"":
-        [st.Page("Home.py", title="Home")],
+    pages = {
              "Excelsior":
              [st.Page(page="pg/pg_excelsior.py", title="Convert to Excel"),
               st.Page(page="pg/pg_descoder.py", title="Convert to OpenAPI"),],
