@@ -4,7 +4,7 @@ import os
 
 def oapi_to_excel():
     uploaded_files = st.file_uploader(label="Convert OpenAPI documents to MS Excel files",
-                                          type=["yaml","yml","json"], accept_multiple_files=True, key="oapi_to_excel")
+                                          type=["yaml","yml","json"], accept_multiple_files=True)
     if uploaded_files:
         st.divider()
         for uploaded_file in uploaded_files:
@@ -23,5 +23,3 @@ def oapi_to_excel():
             overall_status_bar.empty()
 
 oapi_to_excel()
-if __name__ == '__main__':
-    oapi_to_excel()
