@@ -201,7 +201,7 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
         for subschema in schema['oneOf']:
             extract_attributes(subschema, spec, parent_path, visited_refs, attributes, mode=mode, description_map=description_map)    
 
-    elif schema.get('type') == 'object':
+    if schema.get('type') == 'object':
         parent_path = f"{parent_path}.{object_name}" if parent_path else object_name
         if mode in ['extract', 'schemas']:
             append_attribute(full_path=parent_path,
@@ -275,6 +275,7 @@ def extract_attributes(schema, spec, parent_path='', visited_refs=None, attribut
                 update_descriptions(parent_path, schema, description_map[parent_path])
 
         items_schema = schema.get('items', {})
+        #when checking schemas - no need to resolve refs, as they would get picked up later anyway
         if '$ref' in items_schema and mode=='schemas':
             pass
         else:
