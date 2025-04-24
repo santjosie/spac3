@@ -61,24 +61,135 @@ MESSAGES_SCHEMA = {
 }
 
 NEW_HEADER_PARAMETERS = [
-    {
-        "name": "X-Request-ID",
-        "in": "header",
-        "required": True,
-        "schema": {
-            "type": "string"
-        },
-        "description": "Unique request ID"
-    },
-    {
-        "name": "X-Client-ID",
-        "in": "header",
-        "required": True,
-        "schema": {
-            "type": "string"
-        },
-        "description": "Client ID"
-    }
+          {
+            "name": "x-agency-code",
+            "in": "header",
+            "description": "Unique identifier for the agency.",
+            "required": False,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "AVALON"
+              ]
+            }
+          },
+          {
+            "name": "x-agency-phone",
+            "in": "header",
+            "description": "Unique phone number of the agency for identifying the agency.",
+            "required": False,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "9876543210"
+              ]
+            }
+          },
+          {
+            "name": "x-sub-agency-code",
+            "in": "header",
+            "description": "Unique identifier of the secondary or sub-agency.",
+            "required": False,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "AVALON5"
+              ]
+            }
+          },
+          {
+            "name": "x-sub-agency-phone",
+            "in": "header",
+            "description": "Unique phone number for identifying the sub-agency.",
+            "required": False,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "9876543210"
+              ]
+            }
+          },
+          {
+            "name": "x-brand",
+            "in": "header",
+            "description": "Identifies the brand of the cruise line.",
+            "required": False,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "Vista"
+              ]
+            }
+          },
+          {
+            "name": "x-market",
+            "in": "header",
+            "description": "Overrides the default market of the user.",
+            "required": False,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "EUR"
+              ]
+            }
+          },
+          {
+            "name": "x-currency",
+            "in": "header",
+            "description": "Overrides the default currency of the user.",
+            "required": False,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "USD"
+              ]
+            }
+          },
+          {
+            "name": "x-userid-token",
+            "in": "header",
+            "description": "ID token passed in the header for identifying user context.",
+            "required": False,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ext-trace-id",
+            "in": "header",
+            "description": "External transaction id for an API request . Used for end to end traceability.",
+            "required": False,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ext-session-id",
+            "in": "header",
+            "description": "External user session id. Used for locking entities such as bookings.",
+            "required": False,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-pcc",
+            "in": "header",
+            "description": "Unique PCC for identifying the agency.",
+            "required": False,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-office-id",
+            "in": "header",
+            "description": "Unique identifier for the agency office.",
+            "required": False,
+            "schema": {
+              "type": "string"
+            }
+          }
 ]
 
 ERROR_RESPONSE_SCHEMA = {
@@ -218,21 +329,21 @@ def process_message(spec):
 
     return spec
 
-def process_header(spec):
-
+def process_header(spec, header_content):
     # Remove all header parameters
     for path, methods in spec.get('paths', {}).items():
         for method, details in methods.items():
             if 'parameters' in details:
                 details['parameters'] = [param for param in details['parameters'] if param.get('in') != 'header']
-
+    if header_content == "":
+        header_content = NEW_HEADER_PARAMETERS
     # Add new header parameters
     for path, methods in spec.get('paths', {}).items():
         for method, details in methods.items():
             if method in ['get', 'post', 'put', 'delete', 'patch']:
                 if 'parameters' not in details:
                     details['parameters'] = []
-                details['parameters'].extend(NEW_HEADER_PARAMETERS)
+                details['parameters'].extend(header_content)
 
     return spec
 

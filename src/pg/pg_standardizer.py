@@ -1,14 +1,23 @@
 import streamlit as st
 import yaml
+from ruamel.yaml import YAML
+import json
 from utils import standardizer, file_handler, combiner
+from io import StringIO
 
 def body():
-    t_standardizer, t_combiner = st.tabs(["Standardize", "Combine"])
+    t_standardizer, t_combiner, t_splitter = st.tabs(["Standardize", "Combine", "Split"])
     with t_standardizer:
         standardize()
 
     with t_combiner:
         combine()
+
+    with t_splitter:
+        split()
+
+def split():
+    st.write("Split")
 
 def combine():
     spec_files = st.file_uploader(label="Add the files to combine", accept_multiple_files=True,
@@ -31,6 +40,8 @@ def standardize():
         pagination = st.toggle(label="Add pagination?", value=True)
         message = st.toggle(label="Add message?", value=True)
         header = st.toggle(label="Add header?", value=True)
+        if header:
+            header_content = st.text_area(label="Enter header content in JSON format")
         remove_path_server = st.toggle(label="Remove path server?", value=True)
         remove_non_json_content = st.toggle(label="Remove non-json payload content?", value=True)
         combine_into_one = st.toggle(label="Combine into one file?", value=True)
@@ -50,16 +61,22 @@ def standardize():
                     if message:
                         spec_data = standardizer.process_message(spec_data)
                     if header:
-                        spec_data = standardizer.process_header(spec_data)
+                        spec_data = standardizer.process_header(spec_data, json.loads(header_content))
                     if remove_path_server:
                         spec_data = standardizer.remove_path_servers(spec_data)
                     if remove_non_json_content:
                         spec_data = standardizer.remove_non_json_content(spec_data)
                     if combine_into_one and combined_name:
                         spec_data = standardizer.combine_paths(spec_data)
+
+                    yaml = YAML()
+                    yaml.indent(mapping=2, sequence=4, offset=2)
+                    yaml.preserve_quotes = True
+                    output_stream = StringIO()
+                    yaml.dump(spec_data, output_stream)
                     st.download_button(label='Download',
                                type='primary',
-                               data=yaml.dump(spec_data),
+                               data=output_stream.getvalue(), #yaml.dump(spec_data, Dumper=OrderedDumper),
                                file_name=spec_file.name,
                                mime='application/octet-stream')
 
