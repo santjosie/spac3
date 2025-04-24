@@ -1,9 +1,7 @@
 import streamlit as st
 import yaml
-from ruamel.yaml import YAML
 import json
-from utils import standardizer, file_handler, combiner
-from io import StringIO
+from utils import standardizer, file_handler, combiner, splitter
 
 def body():
     t_standardizer, t_combiner, t_splitter = st.tabs(["Standardize", "Combine", "Split"])
@@ -17,7 +15,24 @@ def body():
         split()
 
 def split():
-    st.write("Split")
+    spec_files = st.file_uploader(label="Upload OpenAPI v3.1.0 File", accept_multiple_files=True, type=["yaml", "yml", "json"])
+
+    if spec_files:
+        split = st.button(label="Split")
+        if split:
+            split_files = []
+            for spec_file in spec_files:
+                spec_data = file_handler.load_oapi_spec(spec_file)
+                split_files.extend(splitter.split_openapi_file(spec_data))
+
+            st.write("Split Complete! Download individual files below:")
+            for path, split_spec in split_files:
+                st.download_button(
+                    label=f"Download {path.replace('/', '_')}.yaml",
+                    data=file_handler.dump_oapi_spec(split_spec),
+                    file_name=f"{path.replace('/', '_')}.yaml",
+                    mime="application/x-yaml"
+                )
 
 def combine():
     spec_files = st.file_uploader(label="Add the files to combine", accept_multiple_files=True,
@@ -69,14 +84,9 @@ def standardize():
                     if combine_into_one and combined_name:
                         spec_data = standardizer.combine_paths(spec_data)
 
-                    yaml = YAML()
-                    yaml.indent(mapping=2, sequence=4, offset=2)
-                    yaml.preserve_quotes = True
-                    output_stream = StringIO()
-                    yaml.dump(spec_data, output_stream)
                     st.download_button(label='Download',
                                type='primary',
-                               data=output_stream.getvalue(), #yaml.dump(spec_data, Dumper=OrderedDumper),
+                               data=file_handler.dump_oapi_spec(spec_data), #yaml.dump(spec_data, Dumper=OrderedDumper),
                                file_name=spec_file.name,
                                mime='application/octet-stream')
 

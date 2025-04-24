@@ -21,7 +21,3 @@ def excel_to_oapi():
                                 file_name=uploaded_spec_file.name,
                                 mime='application/octet-stream')
         st.toast(body="Excel converted to OpenAPI document!", icon=":material/thumb_up:")
-
-excel_to_oapi()
-if __name__ == '__main__':
-    excel_to_oapi()

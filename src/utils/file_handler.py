@@ -1,9 +1,16 @@
-import yaml
 from ruamel.yaml import YAML
 import json
 import pandas as pd
 import io
-from collections import OrderedDict
+from io import StringIO
+
+def dump_oapi_spec(spec):
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.preserve_quotes = True
+    output_stream = StringIO()
+    yaml.dump(spec, output_stream)
+    return output_stream.getvalue()
 
 def load_oapi_spec(file):
     """
@@ -13,23 +20,6 @@ def load_oapi_spec(file):
     """
     spec = None
     if file.name.endswith('.yaml') or file.name.endswith('.yml'):
-        """
-        # Create a custom loader that preserves order
-        class OrderedLoader(yaml.SafeLoader):
-            pass
-
-        # Add constructor that uses OrderedDict for mappings
-        def construct_mapping(loader, node):
-            loader.flatten_mapping(node)
-            return OrderedDict(loader.construct_pairs(node))
-
-        # Register the constructor
-        OrderedLoader.add_constructor(
-            yaml.resolver.Resolver.DEFAULT_MAPPING_TAG,
-            construct_mapping
-        )
-        spec = yaml.load(file, Loader=OrderedLoader)
-        """
         # Use ruamel.yaml to preserve order
         yaml = YAML()
         yaml.preserve_quotes = True
