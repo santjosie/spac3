@@ -50,16 +50,16 @@ def combine():
 def standardize():
     spec_files = st.file_uploader(label="Add the files to auto-standardize", accept_multiple_files=True, type=["yaml", "yml", "json"])
     if spec_files:
-        convert_case = st.toggle(label="Convert case?", value=True)
-        error_response = st.toggle(label="Add error response?", value=True)
-        pagination = st.toggle(label="Add pagination?", value=True)
-        message = st.toggle(label="Add message?", value=True)
+        convert_case = st.toggle(label="Convert case?")
+        error_response = st.toggle(label="Add error response?")
+        pagination = st.toggle(label="Add pagination?")
+        message = st.toggle(label="Add message?")
         header = st.toggle(label="Add header?", value=True)
         if header:
             header_content = st.text_area(label="Enter header content in JSON format")
-        remove_path_server = st.toggle(label="Remove path server?", value=True)
-        remove_non_json_content = st.toggle(label="Remove non-json payload content?", value=True)
-        combine_into_one = st.toggle(label="Combine into one file?", value=True)
+        remove_path_server = st.toggle(label="Remove path server?")
+        remove_non_json_content = st.toggle(label="Remove non-json payload content?")
+        combine_into_one = st.toggle(label="Combine into one file?")
         if combine_into_one:
             combined_name = st.text_input(label="Name of the combined file")
         if convert_case or error_response or pagination or message or header or combined_name or remove_path_server or remove_non_json_content:
@@ -76,7 +76,9 @@ def standardize():
                     if message:
                         spec_data = standardizer.process_message(spec_data)
                     if header:
-                        spec_data = standardizer.process_header(spec_data, json.loads(header_content))
+                        if header_content:
+                            header_content = json.loads(header_content)
+                        spec_data = standardizer.process_header(spec_data, header_content)
                     if remove_path_server:
                         spec_data = standardizer.remove_path_servers(spec_data)
                     if remove_non_json_content:
