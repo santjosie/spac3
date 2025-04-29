@@ -50,16 +50,16 @@ def combine():
 def standardize():
     spec_files = st.file_uploader(label="Add the files to auto-standardize", accept_multiple_files=True, type=["yaml", "yml", "json"])
     if spec_files:
-        convert_case = st.toggle(label="Convert case?")
-        error_response = st.toggle(label="Add error response?")
-        pagination = st.toggle(label="Add pagination?")
-        message = st.toggle(label="Add message?")
+        convert_case = st.toggle(label="Convert case?", value=False)
+        error_response = st.toggle(label="Add error response?", value=False)
+        pagination = st.toggle(label="Add pagination?", value=False)
+        message = st.toggle(label="Add message?", value=False)
         header = st.toggle(label="Add header?", value=True)
         if header:
             header_content = st.text_area(label="Enter header content in JSON format")
-        remove_path_server = st.toggle(label="Remove path server?")
-        remove_non_json_content = st.toggle(label="Remove non-json payload content?")
-        combine_into_one = st.toggle(label="Combine into one file?")
+        remove_path_server = st.toggle(label="Remove path server?", value=False)
+        remove_non_json_content = st.toggle(label="Remove non-json payload content?", value=False)
+        combine_into_one = st.toggle(label="Combine into one file?", value=False)
         if combine_into_one:
             combined_name = st.text_input(label="Name of the combined file")
         if convert_case or error_response or pagination or message or header or combined_name or remove_path_server or remove_non_json_content:
