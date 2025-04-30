@@ -1,7 +1,9 @@
 import streamlit as st
 import yaml
 import json
-from utils import standardizer, file_handler, combiner, splitter
+from src.utils import standardizer, file_handler, combiner, splitter
+import zipfile
+from io import BytesIO
 
 def body():
     t_standardizer, t_combiner, t_splitter = st.tabs(["Standardize", "Combine", "Split"])
@@ -59,37 +61,49 @@ def standardize():
             header_content = st.text_area(label="Enter header content in JSON format")
         remove_path_server = st.toggle(label="Remove path server?", value=False)
         remove_non_json_content = st.toggle(label="Remove non-json payload content?", value=False)
-        combine_into_one = st.toggle(label="Combine into one file?", value=False)
-        if combine_into_one:
-            combined_name = st.text_input(label="Name of the combined file")
-        if convert_case or error_response or pagination or message or header or combined_name or remove_path_server or remove_non_json_content:
+        if convert_case or error_response or pagination or message or header or remove_path_server or remove_non_json_content:
             standardize = st.button(label="Standardize")
             if standardize:
-                for spec_file in spec_files:
-                    spec_data = file_handler.load_oapi_spec(spec_file)
-                    if convert_case:
-                        spec_data = standardizer.check_and_convert_casing(spec_data)
-                    if error_response:
-                        spec_data = standardizer.process_error_response(spec_data)
-                    if pagination:
-                        spec_data = standardizer.process_pagination(spec_data)
-                    if message:
-                        spec_data = standardizer.process_message(spec_data)
-                    if header:
-                        if header_content:
-                            header_content = json.loads(header_content)
-                        spec_data = standardizer.process_header(spec_data, header_content)
-                    if remove_path_server:
-                        spec_data = standardizer.remove_path_servers(spec_data)
-                    if remove_non_json_content:
-                        spec_data = standardizer.remove_non_json_content(spec_data)
-                    if combine_into_one and combined_name:
-                        spec_data = standardizer.combine_paths(spec_data)
+                zip_buffer = BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                    for spec_file in spec_files:
+                        spec_data = file_handler.load_oapi_spec(spec_file)
+                        if convert_case:
+                            spec_data = standardizer.check_and_convert_casing(spec_data)
+                        if error_response:
+                            spec_data = standardizer.process_error_response(spec_data)
+                        if pagination:
+                            spec_data = standardizer.process_pagination(spec_data)
+                        if message:
+                            spec_data = standardizer.process_message(spec_data)
+                        if header:
+                            if header_content:
+                                header_content = json.loads(header_content)
+                            spec_data = standardizer.process_header(spec_data, header_content)
+                        if remove_path_server:
+                            spec_data = standardizer.remove_path_servers(spec_data)
+                        if remove_non_json_content:
+                            spec_data = standardizer.remove_non_json_content(spec_data)
 
-                    st.download_button(label='Download',
-                               type='primary',
-                               data=file_handler.dump_oapi_spec(spec_data), #yaml.dump(spec_data, Dumper=OrderedDumper),
-                               file_name=spec_file.name,
-                               mime='application/octet-stream')
+                        # Save each spec_data to an in-memory file
+                        if spec_data:
+                            dumped_spec = file_handler.dump_oapi_spec(spec_data)
+                            if dumped_spec:  # Ensure the dumped spec is not empty or None
+                                zip_file.writestr(spec_file.name, dumped_spec)
+                            else:
+                                st.warning(f"Failed to process file: {spec_file.name}")
+
+                    zip_file.close()
+                    # Prepare the zip file for download
+                    zip_buffer.seek(0)
+                    if zip_file.namelist():  # Check if the zip file contains any files
+                        st.download_button(
+                            label="Download",
+                            data=zip_buffer.getvalue(),
+                            file_name="standardized_openapi_files.zip",
+                            mime="application/zip"
+                        )
+                    else:
+                        st.error("No files were added to the zip. Please check the input files or processing steps.")
 
 body()

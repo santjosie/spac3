@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.excelsior import excelsify, descode
+from src.utils.excelsior import descode
 
 def excel_to_oapi():
     excelcol, spec_col = st.columns(2)
@@ -21,3 +21,5 @@ def excel_to_oapi():
                                 file_name=uploaded_spec_file.name,
                                 mime='application/octet-stream')
         st.toast(body="Excel converted to OpenAPI document!", icon=":material/thumb_up:")
+
+excel_to_oapi()

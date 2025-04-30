@@ -1,5 +1,4 @@
-from typing import Dict, List
-import streamlit as st
+from typing import Dict
 
 # Hard-coded Pagination schema definition
 PAGINATION_SCHEMA = {

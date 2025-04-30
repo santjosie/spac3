@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.schema_parser import excelsifyer
+from src.utils.schema_parser import excelsifyer
 
 def sandbox():
     uploaded_file = st.file_uploader(label="SANDBOX MODE: Convert OpenAPI documents to MS Excel files",
