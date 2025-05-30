@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import io
 from io import StringIO
+import streamlit as st
 
 def dump_oapi_spec(spec):
     yaml = YAML()
@@ -36,6 +37,8 @@ def write_to_excel(parameters=None, request_body=None, response_body=None, schem
     :param attributes:
     :return:
     """
+
+
     df_parameters = pd.DataFrame(parameters) if parameters else None
     df_request_body = pd.DataFrame(request_body) if request_body else None
     df_response_body = pd.DataFrame(response_body) if response_body else None
@@ -43,7 +46,8 @@ def write_to_excel(parameters=None, request_body=None, response_body=None, schem
 
     output = io.BytesIO()
 
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+    # Create a Pandas Excel writer using XlsxWriter as the engin
+    with (pd.ExcelWriter(output, engine='openpyxl') as writer):
         if df_parameters is not None and not df_parameters.empty:
             df_parameters.to_excel(writer, sheet_name='parameters', index=False)
         if df_request_body is not None and not df_request_body.empty:
@@ -52,6 +56,11 @@ def write_to_excel(parameters=None, request_body=None, response_body=None, schem
             df_response_body.to_excel(writer, sheet_name='response_body', index=False)
         if df_schemas is not None and not df_schemas.empty:
             df_schemas.to_excel(writer, sheet_name='schemas', index=False)
+        if all(
+                df is None or df.empty
+                for df in [df_parameters, df_request_body, df_response_body, df_schemas]
+        ):
+            pd.DataFrame().to_excel(writer, sheet_name='empty_sheet', index=False)
 
     output.seek(0)
 

@@ -6,8 +6,9 @@ import yaml
 from .file_handler import load_oapi_spec, write_to_excel
 import ast
 
-VALID_METHODS = {'get', 'post'} #, 'put', 'patch', 'delete', 'head', 'options', 'trace', 'connect'}
+VALID_METHODS = {'get', 'post', 'put'} #, 'put', 'patch', 'delete', 'head', 'options', 'trace', 'connect'}
 UPDATES_TABLE =[]
+VALID_SUCCESS_RESPONSES = ['200', '201', '202', '204'] #, '205', '206', '207', '208', '226']
 
 #extract the request body schema
 def get_parameters(parameters):
@@ -22,6 +23,7 @@ def get_parameters(parameters):
         return parameters_table
 
 def get_req_resp_body(body, spec, type):
+    attributes_table = []
     if type == 'request':
         if body:
             body_content = body.get('content')
@@ -31,9 +33,17 @@ def get_req_resp_body(body, spec, type):
                 return attributes_table
     else:
         if body:
-            if '200' in body:
-                schema = body['200'].get('content').get('application/json').get('schema', {})
-                attributes_table = extract_attributes(schema, spec)
+            if any(key in body for key in VALID_SUCCESS_RESPONSES):
+                matching_key = next((key for key in body if key in VALID_SUCCESS_RESPONSES), None)
+                response_content = body[matching_key]
+                if 'application/json' in response_content.get('content', {}):
+                    schema = response_content.get('content', {}).get('application/json', {}).get('schema', {})
+                    attributes_table = extract_attributes(schema, spec)
+                elif '$ref' in response_content:
+                    ref = response_content['$ref']
+                    resolved_schema, schema_name = resolve_ref(ref, spec)
+                    resolved_schema = resolved_schema.get('content', {}).get('application/json', {}).get('schema', {})
+                    attributes_table = extract_attributes(resolved_schema, spec)
                 return attributes_table
 
 def resolve_ref(ref, spec):
@@ -323,6 +333,10 @@ def excelsify(file):
     schemas_body_status_text = "Processing schemas"
     schemas_body_status_bar = st.sidebar.progress(value=0, text=schemas_body_status_text)
 
+    parameters = []
+    request_body = []
+    response_body = []
+    schema_attributes = []
     for path, path_details in paths.items():
         for method, method_details in path_details.items():
             if method in VALID_METHODS:
@@ -353,7 +367,7 @@ def excelsify(file):
 
     #schemas
     schemas = spec.get('components', {}).get('schemas', {})
-    schema_attributes = []
+
     for schema_name, schema in schemas.items():
         schema_path = schema_name  # Top-level schema name
         schema_attributes.extend(extract_attributes(schema=schema, spec=spec, object_name=schema_path, mode='schemas'))

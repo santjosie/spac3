@@ -1,6 +1,7 @@
 import streamlit as st
 import yaml
 import copy
+import re
 
 def deep_get(data, path_parts):
     for part in path_parts:
@@ -21,8 +22,47 @@ def deep_delete(data, path_parts):
         data = data[part]
     data.pop(path_parts[-1], None)
 
+#def parse_json_pointer(pointer):
+#    return [part.replace('~1', '/').replace('~0', '~') for part in pointer.lstrip('#/').split('/')]
+
+
 def parse_json_pointer(pointer):
-    return [part.replace('~1', '/').replace('~0', '~') for part in pointer.lstrip('#/').split('/')]
+    # Remove leading # and/or /
+    cleaned = pointer.lstrip('#/')
+
+    # Split by / but handle ^ delimited sections
+    parts = []
+    current_part = ""
+    inside_caret = False
+
+    i = 0
+    while i < len(cleaned):
+        char = cleaned[i]
+
+        if char == '^':
+            if inside_caret:
+                # Closing ^, end the special section
+                inside_caret = False
+            else:
+                # Opening ^, start special section
+                inside_caret = True
+            # Don't include the ^ in the output
+        elif char == '/' and not inside_caret:
+            # Split point - add current part and start new one
+            if current_part:  # Only add non-empty parts
+                parts.append(current_part.replace('~1', '/').replace('~0', '~'))
+            current_part = ""
+        else:
+            # Regular character, add to current part
+            current_part += char
+
+        i += 1
+
+    # Add the last part if it exists
+    if current_part:
+        parts.append(current_part.replace('~1', '/').replace('~0', '~'))
+
+    return parts
 
 def body():
     col_base, col_overlay = st.columns(spec=2)
@@ -57,7 +97,7 @@ def body():
             st.download_button(
                 label="⬇️ Download Modified OpenAPI YAML",
                 data=modified_yaml,
-                file_name=base_file.name,
+                file_name=base_file.name.rstrip('.yaml')+'-overlay.yaml',
                 mime="text/yaml"
             )
 
