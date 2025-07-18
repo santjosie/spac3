@@ -18,9 +18,6 @@ def navigator():
              "Excelsior":
              [st.Page(page="src/pg/pg_excelsior.py", title="Convert to Excel"),
               st.Page(page="src/pg/pg_descoder.py", title="Convert to OpenAPI"),],
-             "Standardizer":
-             [st.Page(page="src/pg/pg_standardizer.py", title="Standardize OpenAPI"),
-              st.Page(page="src/pg/pg_standards.py", title="Define Standards"),],
             "Overlays":
             [st.Page(page="src/pg/pg_overlays.py", title="Overlay processor"),]
     }

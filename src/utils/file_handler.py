@@ -3,7 +3,6 @@ import json
 import pandas as pd
 import io
 from io import StringIO
-import streamlit as st
 
 def dump_oapi_spec(spec):
     yaml = YAML()

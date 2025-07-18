@@ -1,7 +1,6 @@
 import streamlit as st
 import yaml
 import copy
-import re
 
 def deep_get(data, path_parts):
     for part in path_parts:
