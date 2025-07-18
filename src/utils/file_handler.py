@@ -30,6 +30,17 @@ def load_oapi_spec(file):
         spec = json.load(file)
     return spec
 
+def fix_timezone_objects(df):
+    """Fix timezone-aware datetime objects in object columns"""
+    df_copy = df.copy()
+    for col in df_copy.columns:
+        if df_copy[col].dtype == 'object':
+            df_copy[col] = df_copy[col].apply(lambda x:
+                str(x.replace(tzinfo=None)) if hasattr(x, 'tzinfo') and x.tzinfo is not None
+                else x
+            )
+    return df_copy
+
 def write_to_excel(parameters=None, request_body=None, response_body=None, schema_attributes=None):
     """
     writes tables passed as parameters in separate spreadsheets in an Excel file in memory
@@ -55,6 +66,7 @@ def write_to_excel(parameters=None, request_body=None, response_body=None, schem
         if df_response_body is not None and not df_response_body.empty:
             df_response_body.to_excel(writer, sheet_name='response_body', index=False)
         if df_schemas is not None and not df_schemas.empty:
+            df_schemas = fix_timezone_objects(df_schemas)
             df_schemas.to_excel(writer, sheet_name='schemas', index=False)
         if all(
                 df is None or df.empty
