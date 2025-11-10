@@ -63,6 +63,8 @@ def write_to_excel(parameters=None, request_body=None, response_body=None, schem
         if df_request_body is not None and not df_request_body.empty:
             df_request_body.to_excel(writer, sheet_name='request_body', index=False)
         if df_response_body is not None and not df_response_body.empty:
+            # Before writing to Excel, convert timezone-aware columns to timezone-naive
+            df_response_body = fix_timezone_objects(df_response_body)
             df_response_body.to_excel(writer, sheet_name='response_body', index=False)
         if df_schemas is not None and not df_schemas.empty:
             df_schemas = fix_timezone_objects(df_schemas)
